@@ -16,6 +16,8 @@ import {
 } from '../types';
 import { AutomationEditForm } from './AutomationEditForm';
 
+import type { SiteOption, RegionOption } from '../types';
+
 interface AutomationCardProps {
   automation: AutomationRule;
   customers: CustomerOption[];
@@ -23,6 +25,8 @@ interface AutomationCardProps {
   jobStatuses: JobStatus[];
   taskTemplates: TaskTemplate[];
   notificationTemplates: NotificationTemplate[];
+  sites: SiteOption[];
+  regions: RegionOption[];
   isExpanded: boolean;
   isNew?: boolean;
   onToggle: () => void;
@@ -38,6 +42,8 @@ export function AutomationCard({
   jobStatuses,
   taskTemplates,
   notificationTemplates,
+  sites,
+  regions,
   isExpanded,
   isNew = false,
   onToggle,
@@ -64,6 +70,8 @@ export function AutomationCard({
           jobStatuses={jobStatuses}
           taskTemplates={taskTemplates}
           notificationTemplates={notificationTemplates}
+          sites={sites}
+          regions={regions}
           onSave={onSave}
           onCancel={onCancel || onToggle}
           isNew={true}
@@ -164,6 +172,8 @@ export function AutomationCard({
           jobStatuses={jobStatuses}
           taskTemplates={taskTemplates}
           notificationTemplates={notificationTemplates}
+          sites={sites}
+          regions={regions}
           onSave={onSave}
           onCancel={onToggle}
         />

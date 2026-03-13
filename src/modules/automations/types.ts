@@ -143,10 +143,43 @@ export const CONDITION_TYPE_OPTIONS: { value: ConditionType; label: string; icon
 /**
  * Base condition with common fields.
  */
+/**
+ * Site reference for condition filters.
+ */
+export interface SiteOption {
+  id: string;
+  name: string;
+}
+
+/**
+ * Region reference for condition filters.
+ */
+export interface RegionOption {
+  id: string;
+  name: string;
+}
+
+/**
+ * Priority options for condition filters.
+ */
+export const PRIORITY_OPTIONS = [
+  { value: '1', label: 'Critical' },
+  { value: '2', label: 'High' },
+  { value: '3', label: 'Normal' },
+  { value: '4', label: 'Low' },
+] as const;
+
 interface BaseCondition {
   id: string;
   type: ConditionType;
   jobTypeFilter: JobTypeFilter;
+  // Advanced filters
+  priorityFilter?: string;         // Priority ID or empty for all
+  fromSiteIds?: string[];           // Filter by origin site(s)
+  toSiteIds?: string[];             // Filter by destination site(s)
+  fromRegionIds?: string[];         // Filter by origin region(s)
+  toRegionIds?: string[];           // Filter by destination region(s)
+  timeThresholdMinutes?: number;    // Minutes in state (for unassigned/assigned)
 }
 
 /**

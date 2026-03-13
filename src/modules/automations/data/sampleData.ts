@@ -7,6 +7,8 @@ import type {
   JobStatus,
   TaskTemplate,
   NotificationTemplate,
+  SiteOption,
+  RegionOption,
 } from '../types';
 
 // ============================================
@@ -71,6 +73,23 @@ export const sampleNotificationTemplates: NotificationTemplate[] = [
 // ============================================
 // SAMPLE AUTOMATIONS
 // ============================================
+
+export const sampleSites: SiteOption[] = [
+  { id: 'site-1', name: 'Auckland CBD' },
+  { id: 'site-2', name: 'Auckland Airport' },
+  { id: 'site-3', name: 'Hamilton' },
+  { id: 'site-4', name: 'Wellington' },
+  { id: 'site-5', name: 'Christchurch' },
+  { id: 'site-6', name: 'Tauranga' },
+];
+
+export const sampleRegions: RegionOption[] = [
+  { id: 'reg-1', name: 'Auckland' },
+  { id: 'reg-2', name: 'Waikato' },
+  { id: 'reg-3', name: 'Bay of Plenty' },
+  { id: 'reg-4', name: 'Wellington' },
+  { id: 'reg-5', name: 'Canterbury' },
+];
 
 export const sampleAutomations: AutomationRule[] = [
   // Example 1: Unassigned job reminder

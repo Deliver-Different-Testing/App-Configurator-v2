@@ -27,6 +27,8 @@ import {
   createEmptyAction,
 } from '../types';
 
+import type { SiteOption, RegionOption } from '../types';
+
 interface AutomationEditFormProps {
   automation: AutomationRule;
   customers: CustomerOption[];
@@ -34,6 +36,8 @@ interface AutomationEditFormProps {
   jobStatuses: JobStatus[];
   taskTemplates: TaskTemplate[];
   notificationTemplates: NotificationTemplate[];
+  sites: SiteOption[];
+  regions: RegionOption[];
   onSave: (automation: AutomationRule) => void;
   onCancel: () => void;
   isNew?: boolean;
@@ -46,6 +50,8 @@ export function AutomationEditForm({
   jobStatuses,
   taskTemplates,
   notificationTemplates,
+  sites,
+  regions,
   onSave,
   onCancel,
   isNew = false,
@@ -295,6 +301,8 @@ export function AutomationEditForm({
                 key={condition.id}
                 condition={condition}
                 jobStatuses={jobStatuses}
+                sites={sites}
+                regions={regions}
                 onChange={(c) => updateCondition(index, c)}
                 onRemove={() => removeCondition(index)}
               />

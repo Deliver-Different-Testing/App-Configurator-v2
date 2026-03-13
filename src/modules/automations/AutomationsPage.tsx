@@ -14,6 +14,8 @@ import {
   sampleJobStatuses,
   sampleTaskTemplates,
   sampleNotificationTemplates,
+  sampleSites,
+  sampleRegions,
 } from './data/sampleData';
 
 export function AutomationsPage() {
@@ -303,6 +305,8 @@ export function AutomationsPage() {
             jobStatuses={sampleJobStatuses}
             taskTemplates={sampleTaskTemplates}
             notificationTemplates={sampleNotificationTemplates}
+            sites={sampleSites}
+            regions={sampleRegions}
             isExpanded={true}
             isNew={true}
             onToggle={() => {}}
@@ -326,6 +330,8 @@ export function AutomationsPage() {
                     jobStatuses={sampleJobStatuses}
                     taskTemplates={sampleTaskTemplates}
                     notificationTemplates={sampleNotificationTemplates}
+            sites={sampleSites}
+            regions={sampleRegions}
                     isExpanded={expandedId === result.automation.id}
                     onToggle={() =>
                       setExpandedId(expandedId === result.automation.id ? null : result.automation.id)
@@ -366,6 +372,8 @@ export function AutomationsPage() {
                   jobStatuses={sampleJobStatuses}
                   taskTemplates={sampleTaskTemplates}
                   notificationTemplates={sampleNotificationTemplates}
+            sites={sampleSites}
+            regions={sampleRegions}
                   isExpanded={expandedId === automation.id}
                   onToggle={() =>
                     setExpandedId(expandedId === automation.id ? null : automation.id)
