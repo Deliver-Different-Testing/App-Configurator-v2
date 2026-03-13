@@ -93,7 +93,7 @@ export function ScopeSelector({
               })}
             </div>
             {scope.customerIds.length === 0 && (
-              <p className="text-xs text-error mt-2">Please select at least one customer</p>
+              <p className="text-xs text-text-muted mt-2">No selection = applies to all customers</p>
             )}
           </div>
         )}
@@ -137,7 +137,7 @@ export function ScopeSelector({
               })}
             </div>
             {scope.speedIds.length === 0 && (
-              <p className="text-xs text-error mt-2">Please select at least one speed</p>
+              <p className="text-xs text-text-muted mt-2">No selection = applies to all speeds</p>
             )}
           </div>
         )}
@@ -146,28 +146,20 @@ export function ScopeSelector({
       {/* Scope Summary */}
       <div className="p-2 bg-surface-cream rounded text-xs text-text-secondary">
         <strong>Scope:</strong> This automation applies to{' '}
-        {scope.allCustomers ? (
+        {scope.allCustomers || scope.customerIds.length === 0 ? (
           'all customers'
-        ) : scope.customerIds.length > 0 ? (
-          <>
-            <span className="font-medium text-text-primary">
-              {scope.customerIds.length} customer{scope.customerIds.length !== 1 ? 's' : ''}
-            </span>
-          </>
         ) : (
-          <span className="text-error">no customers selected</span>
+          <span className="font-medium text-text-primary">
+            {scope.customerIds.length} customer{scope.customerIds.length !== 1 ? 's' : ''}
+          </span>
         )}{' '}
         and{' '}
-        {scope.allSpeeds ? (
+        {scope.allSpeeds || scope.speedIds.length === 0 ? (
           'all speeds'
-        ) : scope.speedIds.length > 0 ? (
-          <>
-            <span className="font-medium text-text-primary">
-              {scope.speedIds.length} speed{scope.speedIds.length !== 1 ? 's' : ''}
-            </span>
-          </>
         ) : (
-          <span className="text-error">no speeds selected</span>
+          <span className="font-medium text-text-primary">
+            {scope.speedIds.length} speed{scope.speedIds.length !== 1 ? 's' : ''}
+          </span>
         )}
         .
       </div>

@@ -1,19 +1,49 @@
-import type { InputHTMLAttributes } from 'react';
+import { forwardRef, type InputHTMLAttributes } from 'react';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
+  error?: string;
+  icon?: React.ReactNode;
 }
 
-export function Input({ label, className = '', id, ...props }: InputProps) {
-  const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
-  return (
-    <div>
-      {label && (
-        <label htmlFor={inputId} style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: 4 }}>
-          {label}
-        </label>
-      )}
-      <input id={inputId} className={`input ${className}`} style={{ width: '100%' }} {...props} />
-    </div>
-  );
-}
+export const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ label, error, icon, className = '', ...props }, ref) => {
+    return (
+      <div className="w-full">
+        {label && (
+          <label className="block text-sm font-medium text-text-primary mb-1">
+            {label}
+          </label>
+        )}
+        <div className="relative">
+          {icon && (
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">
+              {icon}
+            </div>
+          )}
+          <input
+            ref={ref}
+            className={`
+              w-full px-3.5 py-2.5 text-base
+              border-2 border-border rounded-md
+              bg-white text-text-primary
+              placeholder:text-text-muted
+              transition-all duration-normal
+              focus:outline-none focus:border-brand-cyan focus:shadow-cyan-glow
+              disabled:bg-surface-light disabled:cursor-not-allowed
+              ${icon ? 'pl-10' : ''}
+              ${error ? 'border-error focus:border-error focus:shadow-none' : ''}
+              ${className}
+            `}
+            {...props}
+          />
+        </div>
+        {error && (
+          <p className="mt-1 text-sm text-error">{error}</p>
+        )}
+      </div>
+    );
+  }
+);
+
+Input.displayName = 'Input';

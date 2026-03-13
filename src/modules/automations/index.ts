@@ -10,5 +10,12 @@ export { ScopeSelector } from './components/ScopeSelector';
 // Re-export types
 export * from './types';
 
-// Re-export API helpers
-export * from './api';
+// Re-export sample data for testing
+export {
+  sampleAutomations,
+  sampleCustomers,
+  sampleSpeeds,
+  sampleJobStatuses,
+  sampleTaskTemplates,
+  sampleNotificationTemplates,
+} from './data/sampleData';

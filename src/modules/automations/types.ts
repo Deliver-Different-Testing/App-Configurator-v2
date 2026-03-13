@@ -141,52 +141,12 @@ export const CONDITION_TYPE_OPTIONS: { value: ConditionType; label: string; icon
 ];
 
 /**
- * Site option for from/to site filters.
- */
-export interface SiteOption {
-  id: string;
-  name: string;
-  code?: string;
-}
-
-/**
- * Region option for from/to region filters.
- */
-export interface RegionOption {
-  id: string;
-  name: string;
-}
-
-/**
- * Priority filter options.
- */
-export const PRIORITY_OPTIONS: { value: string; label: string }[] = [
-  { value: 'ALL', label: 'All priorities' },
-  { value: '1', label: 'Critical' },
-  { value: '2', label: 'High' },
-  { value: '3', label: 'Normal' },
-  { value: '4', label: 'Low' },
-];
-
-/**
  * Base condition with common fields.
  */
 interface BaseCondition {
   id: string;
   type: ConditionType;
   jobTypeFilter: JobTypeFilter;
-  /** Priority filter: 'ALL' or specific priority ID */
-  priorityFilter?: string;
-  /** Comma-separated from site IDs */
-  fromSiteIds?: string[];
-  /** Comma-separated to site IDs */
-  toSiteIds?: string[];
-  /** Comma-separated from region IDs */
-  fromRegionIds?: string[];
-  /** Comma-separated to region IDs */
-  toRegionIds?: string[];
-  /** Time threshold in minutes (for unassigned/assigned conditions) */
-  timeThresholdMinutes?: number;
 }
 
 /**
@@ -541,7 +501,7 @@ export function getScopeSummary(
   let customerText = 'All customers';
   let speedText = 'All speeds';
 
-  if (!scope.allCustomers && scope.customerIds.length > 0) {
+  if (!scope.allCustomers && scope.customerIds.length > 0 && customers.length > 0) {
     const names = scope.customerIds
       .map(id => customers.find(c => c.id === id)?.shortName ?? id)
       .slice(0, 3);

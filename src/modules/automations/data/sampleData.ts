@@ -7,8 +7,6 @@ import type {
   JobStatus,
   TaskTemplate,
   NotificationTemplate,
-  SiteOption,
-  RegionOption,
 } from '../types';
 
 // ============================================
@@ -70,23 +68,6 @@ export const sampleNotificationTemplates: NotificationTemplate[] = [
   { id: 'notif-8', name: 'Scan Event Notification', type: 'group' },
 ];
 
-export const sampleSites: SiteOption[] = [
-  { id: 'site-1', name: 'Auckland CBD', code: 'AKL' },
-  { id: 'site-2', name: 'East Tamaki', code: 'ETK' },
-  { id: 'site-3', name: 'Penrose', code: 'PNR' },
-  { id: 'site-4', name: 'Hamilton', code: 'HML' },
-  { id: 'site-5', name: 'Christchurch', code: 'CHC' },
-  { id: 'site-6', name: 'Wellington', code: 'WLG' },
-];
-
-export const sampleRegions: RegionOption[] = [
-  { id: 'region-1', name: 'Auckland' },
-  { id: 'region-2', name: 'Waikato' },
-  { id: 'region-3', name: 'Bay of Plenty' },
-  { id: 'region-4', name: 'Wellington' },
-  { id: 'region-5', name: 'Canterbury' },
-];
-
 // ============================================
 // SAMPLE AUTOMATIONS
 // ============================================
@@ -109,8 +90,6 @@ export const sampleAutomations: AutomationRule[] = [
         id: 'cond-1-1',
         type: 'job_unassigned',
         jobTypeFilter: 'standard',
-        timeThresholdMinutes: 15,
-        fromSiteIds: ['site-1', 'site-2'],
       },
       {
         id: 'cond-1-2',
@@ -296,9 +275,6 @@ export const sampleAutomations: AutomationRule[] = [
         type: 'scan',
         jobTypeFilter: 'all',
         scanTypes: ['sort_scan', 'inwards_depot_scan'],
-        priorityFilter: '2',
-        toSiteIds: ['site-3', 'site-5'],
-        toRegionIds: ['region-1', 'region-5'],
       },
     ],
     actions: [

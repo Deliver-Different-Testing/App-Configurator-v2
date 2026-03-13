@@ -1,38 +1,12 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Zap, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, Zap, Search, X } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { SearchInput } from '../../components/filters/SearchInput';
 import { FilterDropdown } from '../../components/filters/FilterDropdown';
 import { AutomationCard } from './components/AutomationCard';
-import type {
-  AutomationRule,
-  AutomationFilterState,
-  CustomerOption,
-  SpeedOption,
-  JobStatus,
-  TaskTemplate,
-  NotificationTemplate,
-  SiteOption,
-  RegionOption,
-} from './types';
+import type { AutomationRule, AutomationFilterState } from './types';
 import { createEmptyAutomation } from './types';
-import {
-  fetchAutomations,
-  fetchCustomers,
-  fetchSpeeds,
-  fetchJobStatuses,
-  fetchTaskTemplates,
-  fetchNotificationTemplates,
-  fetchSites,
-  fetchRegions,
-  createAutomation,
-  updateAutomation,
-  deleteAutomation as deleteAutomationApi,
-  toggleAutomation as _toggleAutomation,
-  apiRuleToFrontend,
-  frontendRuleToApi,
-  IS_DEMO,
-} from './api';
+import { smartSearch, type SearchResult } from './utils/smartSearch';
 import {
   sampleAutomations,
   sampleCustomers,
@@ -40,113 +14,19 @@ import {
   sampleJobStatuses,
   sampleTaskTemplates,
   sampleNotificationTemplates,
-  sampleSites,
-  sampleRegions,
 } from './data/sampleData';
 
-// ---------------------------------------------------------------------------
-// Hook: load data from the API
-// ---------------------------------------------------------------------------
-
-function useAutomationsData() {
-  const [automations, setAutomations] = useState<AutomationRule[]>([]);
-  const [customers, setCustomers] = useState<CustomerOption[]>([]);
-  const [speeds, setSpeeds] = useState<SpeedOption[]>([]);
-  const [jobStatuses, setJobStatuses] = useState<JobStatus[]>([]);
-  const [taskTemplates, setTaskTemplates] = useState<TaskTemplate[]>([]);
-  const [notificationTemplates, setNotificationTemplates] = useState<NotificationTemplate[]>([]);
-  const [sites, setSites] = useState<SiteOption[]>([]);
-  const [regions, setRegions] = useState<RegionOption[]>([]);
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadAll = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      if (IS_DEMO) {
-        // Use rich sample data for demo/GitHub Pages
-        setAutomations(sampleAutomations);
-        setCustomers(sampleCustomers);
-        setSpeeds(sampleSpeeds);
-        setJobStatuses(sampleJobStatuses);
-        setTaskTemplates(sampleTaskTemplates);
-        setNotificationTemplates(sampleNotificationTemplates);
-        setSites(sampleSites);
-        setRegions(sampleRegions);
-      } else {
-        const [rulesData, custData, speedData, statusData, taskData, notifData, sitesData, regionsData] =
-          await Promise.all([
-            fetchAutomations(),
-            fetchCustomers(),
-            fetchSpeeds(),
-            fetchJobStatuses(),
-            fetchTaskTemplates(),
-            fetchNotificationTemplates(),
-            fetchSites(),
-            fetchRegions(),
-          ]);
-        setAutomations(rulesData.map(apiRuleToFrontend));
-        setCustomers(custData);
-        setSpeeds(speedData);
-        setJobStatuses(statusData);
-        setTaskTemplates(taskData);
-        setNotificationTemplates(notifData);
-        setSites(sitesData);
-        setRegions(regionsData);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadAll();
-  }, [loadAll]);
-
-  return {
-    automations,
-    setAutomations,
-    customers,
-    speeds,
-    jobStatuses,
-    taskTemplates,
-    notificationTemplates,
-    sites,
-    regions,
-    loading,
-    error,
-    reload: loadAll,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
 export function AutomationsPage() {
-  const {
-    automations,
-    setAutomations,
-    customers,
-    speeds,
-    jobStatuses,
-    taskTemplates,
-    notificationTemplates,
-    sites,
-    regions,
-    loading,
-    error,
-    reload,
-  } = useAutomationsData();
-
+  // State
+  const [automations, setAutomations] = useState<AutomationRule[]>(sampleAutomations);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [newAutomation, setNewAutomation] = useState<AutomationRule | null>(null);
-  const [saving, setSaving] = useState(false);
+
+  // AI search state
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiInput, setAiInput] = useState('');
+  const [aiResults, setAiResults] = useState<SearchResult[]>([]);
 
   // Filter state
   const [filters, setFilters] = useState<AutomationFilterState>({
@@ -158,31 +38,44 @@ export function AutomationsPage() {
   // Filter automations
   const filteredAutomations = useMemo(() => {
     return automations.filter((auto) => {
+      // Customer filter (empty customerIds = all customers)
       if (filters.customerId !== 'all') {
         if (
           !auto.scope.allCustomers &&
+          auto.scope.customerIds.length > 0 &&
           !auto.scope.customerIds.includes(filters.customerId)
         ) {
           return false;
         }
       }
+
+      // Speed filter (empty speedIds = all speeds)
       if (filters.speedId !== 'all') {
-        if (!auto.scope.allSpeeds && !auto.scope.speedIds.includes(filters.speedId)) {
+        if (
+          !auto.scope.allSpeeds &&
+          auto.scope.speedIds.length > 0 &&
+          !auto.scope.speedIds.includes(filters.speedId)
+        ) {
           return false;
         }
       }
+
+      // Search filter
       if (filters.search) {
         const query = filters.search.toLowerCase();
         const matchesSearch =
           auto.name.toLowerCase().includes(query) ||
           auto.description?.toLowerCase().includes(query);
-        if (!matchesSearch) return false;
+        if (!matchesSearch) {
+          return false;
+        }
       }
+
       return true;
     });
   }, [automations, filters]);
 
-  // Create
+  // Handle creating new automation
   const handleNewAutomation = () => {
     const empty = createEmptyAutomation();
     setNewAutomation({
@@ -195,65 +88,48 @@ export function AutomationsPage() {
     setExpandedId(null);
   };
 
-  const handleSaveNew = async (automation: AutomationRule) => {
-    setSaving(true);
-    try {
-      const created = await createAutomation(frontendRuleToApi(automation));
-      setAutomations((prev) => [apiRuleToFrontend(created), ...prev]);
-      setIsCreating(false);
-      setNewAutomation(null);
-    } catch (err) {
-      alert(`Failed to create: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
-      setSaving(false);
-    }
+  // Handle save new automation
+  const handleSaveNew = (automation: AutomationRule) => {
+    setAutomations((prev) => [automation, ...prev]);
+    setIsCreating(false);
+    setNewAutomation(null);
   };
 
+  // Handle cancel new automation
   const handleCancelNew = () => {
     setIsCreating(false);
     setNewAutomation(null);
   };
 
-  // Update
-  const handleUpdate = async (automation: AutomationRule) => {
-    setSaving(true);
-    try {
-      const updated = await updateAutomation(
-        Number(automation.id),
-        frontendRuleToApi(automation),
-      );
-      setAutomations((prev) =>
-        prev.map((a) => (a.id === automation.id ? apiRuleToFrontend(updated) : a)),
-      );
-      setExpandedId(null);
-    } catch (err) {
-      alert(`Failed to update: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
-      setSaving(false);
-    }
+  // Handle update existing automation
+  const handleUpdate = (automation: AutomationRule) => {
+    setAutomations((prev) =>
+      prev.map((a) => (a.id === automation.id ? automation : a))
+    );
+    setExpandedId(null);
   };
 
-  // Delete
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this automation?')) return;
-    try {
-      await deleteAutomationApi(Number(id));
+  // Handle delete automation
+  const handleDelete = (id: string) => {
+    if (window.confirm('Are you sure you want to delete this automation?')) {
       setAutomations((prev) => prev.filter((a) => a.id !== id));
-    } catch (err) {
-      alert(`Failed to delete: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 
   // Filter options
-  const customerOptions = ['All Customers', ...customers.map((c) => c.shortName)];
-  const speedOptions = ['All Speeds', ...speeds.map((s) => s.name)];
+  const customerOptions = [
+    'All Customers',
+    ...sampleCustomers.map((c) => c.shortName),
+  ];
+  const speedOptions = ['All Speeds', ...sampleSpeeds.map((s) => s.name)];
 
+  // Handle filter changes
   const handleCustomerChange = (values: string[]) => {
     const value = values[0];
     if (!value || value === 'All Customers') {
       setFilters((prev) => ({ ...prev, customerId: 'all' }));
     } else {
-      const customer = customers.find((c) => c.shortName === value);
+      const customer = sampleCustomers.find((c) => c.shortName === value);
       setFilters((prev) => ({ ...prev, customerId: customer?.id || 'all' }));
     }
   };
@@ -263,62 +139,53 @@ export function AutomationsPage() {
     if (!value || value === 'All Speeds') {
       setFilters((prev) => ({ ...prev, speedId: 'all' }));
     } else {
-      const speed = speeds.find((s) => s.name === value);
+      const speed = sampleSpeeds.find((s) => s.name === value);
       setFilters((prev) => ({ ...prev, speedId: speed?.id || 'all' }));
     }
   };
 
   const clearAllFilters = () => {
-    setFilters({ customerId: 'all', speedId: 'all', search: '' });
+    setFilters({
+      customerId: 'all',
+      speedId: 'all',
+      search: '',
+    });
+  };
+
+  const handleAiSearch = () => {
+    if (!aiInput.trim()) {
+      setAiQuery('');
+      setAiResults([]);
+      return;
+    }
+    setAiQuery(aiInput);
+    const results = smartSearch(aiInput, automations, sampleCustomers, sampleSpeeds);
+    setAiResults(results);
+  };
+
+  const clearAiSearch = () => {
+    setAiQuery('');
+    setAiInput('');
+    setAiResults([]);
   };
 
   const hasActiveFilters =
-    filters.customerId !== 'all' || filters.speedId !== 'all' || filters.search !== '';
+    filters.customerId !== 'all' ||
+    filters.speedId !== 'all' ||
+    filters.search !== '';
 
+  // Get selected filter values for display
   const getSelectedCustomer = (): string[] => {
     if (filters.customerId === 'all') return [];
-    const customer = customers.find((c) => c.id === filters.customerId);
+    const customer = sampleCustomers.find((c) => c.id === filters.customerId);
     return customer ? [customer.shortName] : [];
   };
 
   const getSelectedSpeed = (): string[] => {
     if (filters.speedId === 'all') return [];
-    const speed = speeds.find((s) => s.id === filters.speedId);
+    const speed = sampleSpeeds.find((s) => s.id === filters.speedId);
     return speed ? [speed.name] : [];
   };
-
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
-
-  // Loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-surface-light flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-brand-cyan mx-auto mb-3" />
-          <p className="text-text-secondary">Loading automations…</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="min-h-screen bg-surface-light flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-3" />
-          <p className="text-text-primary font-medium mb-1">Failed to load automations</p>
-          <p className="text-sm text-text-secondary mb-4">{error}</p>
-          <Button onClick={reload}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Retry
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-surface-light">
@@ -336,7 +203,7 @@ export function AutomationsPage() {
               </p>
             </div>
           </div>
-          <Button onClick={handleNewAutomation} disabled={isCreating || saving}>
+          <Button onClick={handleNewAutomation} disabled={isCreating}>
             <Plus className="w-4 h-4 mr-2" />
             New Automation
           </Button>
@@ -345,6 +212,37 @@ export function AutomationsPage() {
 
       {/* Content */}
       <div className="px-8 py-6 space-y-4">
+        {/* Auto-Mate AI Search */}
+        <div className="relative">
+          <div className="relative rounded-xl p-[2px]" style={{ background: 'linear-gradient(135deg, #06b6d4, #3b82f6, #06b6d4)' }}>
+            <div className="flex items-center bg-white rounded-[10px] overflow-hidden">
+              <div className="flex items-center gap-2 pl-4 pr-2 text-brand-cyan">
+                <span className="text-lg">⚡</span>
+                <span className="text-xs font-semibold uppercase tracking-wide whitespace-nowrap">Auto-Mate</span>
+              </div>
+              <input
+                type="text"
+                value={aiInput}
+                onChange={(e) => setAiInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAiSearch()}
+                placeholder="Ask Auto-Mate: Find medical related automations..."
+                className="flex-1 py-3 px-2 text-sm border-0 outline-none bg-transparent placeholder:text-gray-400"
+              />
+              {aiQuery && (
+                <button onClick={clearAiSearch} className="p-2 text-gray-400 hover:text-gray-600">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                onClick={handleAiSearch}
+                className="px-4 py-3 bg-brand-cyan text-white hover:bg-brand-cyan/90 transition-colors"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Filters */}
         <div className="space-y-3">
           <SearchInput
@@ -352,6 +250,7 @@ export function AutomationsPage() {
             onChange={(value) => setFilters((prev) => ({ ...prev, search: value }))}
             placeholder="Search automations by name or description..."
           />
+
           <div className="flex items-center gap-2 flex-wrap">
             <FilterDropdown
               id="customer"
@@ -360,6 +259,7 @@ export function AutomationsPage() {
               selectedValues={getSelectedCustomer()}
               onChange={handleCustomerChange}
             />
+
             <FilterDropdown
               id="speed"
               label="Speed"
@@ -367,6 +267,7 @@ export function AutomationsPage() {
               selectedValues={getSelectedSpeed()}
               onChange={handleSpeedChange}
             />
+
             {hasActiveFilters && (
               <button
                 onClick={clearAllFilters}
@@ -380,20 +281,28 @@ export function AutomationsPage() {
 
         {/* Results count */}
         <div className="text-sm text-text-secondary">
-          Showing {filteredAutomations.length} of {automations.length} automations
+          {aiQuery ? (
+            <>
+              <span className="font-medium text-brand-cyan">⚡ Auto-Mate:</span>{' '}
+              {aiResults.length} result{aiResults.length !== 1 ? 's' : ''} for "{aiQuery}"
+              <button onClick={clearAiSearch} className="ml-2 text-brand-cyan hover:underline text-xs">
+                Clear & show all
+              </button>
+            </>
+          ) : (
+            <>Showing {filteredAutomations.length} of {automations.length} automations</>
+          )}
         </div>
 
         {/* New Automation Card */}
         {isCreating && newAutomation && (
           <AutomationCard
             automation={newAutomation}
-            customers={customers}
-            speeds={speeds}
-            jobStatuses={jobStatuses}
-            taskTemplates={taskTemplates}
-            notificationTemplates={notificationTemplates}
-            sites={sites}
-            regions={regions}
+            customers={sampleCustomers}
+            speeds={sampleSpeeds}
+            jobStatuses={sampleJobStatuses}
+            taskTemplates={sampleTaskTemplates}
+            notificationTemplates={sampleNotificationTemplates}
             isExpanded={true}
             isNew={true}
             onToggle={() => {}}
@@ -405,36 +314,79 @@ export function AutomationsPage() {
 
         {/* Automations List */}
         <div className="space-y-3">
-          {filteredAutomations.map((automation) => (
-            <AutomationCard
-              key={automation.id}
-              automation={automation}
-              customers={customers}
-              speeds={speeds}
-              jobStatuses={jobStatuses}
-              taskTemplates={taskTemplates}
-              notificationTemplates={notificationTemplates}
-              sites={sites}
-              regions={regions}
-              isExpanded={expandedId === automation.id}
-              onToggle={() =>
-                setExpandedId(expandedId === automation.id ? null : automation.id)
-              }
-              onSave={handleUpdate}
-              onDelete={() => handleDelete(automation.id)}
-            />
-          ))}
+          {aiQuery ? (
+            // AI Search Results
+            aiResults.length > 0 ? (
+              aiResults.map((result) => (
+                <div key={result.automation.id}>
+                  <AutomationCard
+                    automation={result.automation}
+                    customers={sampleCustomers}
+                    speeds={sampleSpeeds}
+                    jobStatuses={sampleJobStatuses}
+                    taskTemplates={sampleTaskTemplates}
+                    notificationTemplates={sampleNotificationTemplates}
+                    isExpanded={expandedId === result.automation.id}
+                    onToggle={() =>
+                      setExpandedId(expandedId === result.automation.id ? null : result.automation.id)
+                    }
+                    onSave={handleUpdate}
+                    onDelete={() => handleDelete(result.automation.id)}
+                  />
+                  <div className="flex flex-wrap gap-1 mt-1 ml-4">
+                    {result.matchReasons.map((reason, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center px-2 py-0.5 text-[11px] rounded-full bg-brand-cyan/10 text-brand-cyan border border-brand-cyan/20"
+                      >
+                        Matched: {reason}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-12 bg-white border-2 border-dashed border-brand-cyan/30 rounded-lg">
+                <span className="text-4xl mb-3 block">⚡</span>
+                <p className="text-text-muted font-medium">No automations match that query</p>
+                <p className="text-sm text-text-muted mt-1">
+                  Try searching for keywords like "pickup", "SMS", "status", customer names, or "active"/"inactive"
+                </p>
+              </div>
+            )
+          ) : (
+            // Regular filtered list
+            <>
+              {filteredAutomations.map((automation) => (
+                <AutomationCard
+                  key={automation.id}
+                  automation={automation}
+                  customers={sampleCustomers}
+                  speeds={sampleSpeeds}
+                  jobStatuses={sampleJobStatuses}
+                  taskTemplates={sampleTaskTemplates}
+                  notificationTemplates={sampleNotificationTemplates}
+                  isExpanded={expandedId === automation.id}
+                  onToggle={() =>
+                    setExpandedId(expandedId === automation.id ? null : automation.id)
+                  }
+                  onSave={handleUpdate}
+                  onDelete={() => handleDelete(automation.id)}
+                />
+              ))}
 
-          {filteredAutomations.length === 0 && !isCreating && (
-            <div className="text-center py-12 bg-white border-2 border-dashed border-border rounded-lg">
-              <Zap className="w-12 h-12 mx-auto text-text-muted mb-3" />
-              <p className="text-text-muted font-medium">No automations found</p>
-              <p className="text-sm text-text-muted mt-1">
-                {hasActiveFilters
-                  ? 'Try adjusting your filters'
-                  : 'Click "New Automation" to create your first rule'}
-              </p>
-            </div>
+              {filteredAutomations.length === 0 && !isCreating && (
+                <div className="text-center py-12 bg-white border-2 border-dashed border-border rounded-lg">
+                  <Zap className="w-12 h-12 mx-auto text-text-muted mb-3" />
+                  <p className="text-text-muted font-medium">No automations found</p>
+                  <p className="text-sm text-text-muted mt-1">
+                    {hasActiveFilters
+                      ? 'Try adjusting your filters'
+                      : 'Click "New Automation" to create your first rule'}
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

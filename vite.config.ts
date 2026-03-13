@@ -1,9 +1,18 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react()],
   base: '/App-Configurator-v2/',
+  server: {
+    proxy: {
+      // Proxy API requests to the backend
+      '/api': {
+        target: process.env.VITE_API_URL || 'https://integrationtest-production.up.railway.app',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
 })

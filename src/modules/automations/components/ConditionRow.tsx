@@ -7,8 +7,6 @@ import type {
   TimeUnit,
   StatusConditionMode,
   ScanType,
-  SiteOption,
-  RegionOption,
 } from '../types';
 import {
   CONDITION_TYPE_OPTIONS,
@@ -17,7 +15,6 @@ import {
   TIME_UNIT_OPTIONS,
   STATUS_CONDITION_MODES,
   SCAN_TYPE_OPTIONS,
-  PRIORITY_OPTIONS,
   createEmptyCondition,
 } from '../types';
 import type { JobStatus } from '../types';
@@ -25,61 +22,13 @@ import type { JobStatus } from '../types';
 interface ConditionRowProps {
   condition: Condition;
   jobStatuses: JobStatus[];
-  sites: SiteOption[];
-  regions: RegionOption[];
   onChange: (condition: Condition) => void;
   onRemove: () => void;
-}
-
-/** Chip multi-select for sites/regions */
-function ChipSelect<T extends { id: string; name: string }>({
-  label,
-  options,
-  selectedIds,
-  onChange,
-}: {
-  label: string;
-  options: T[];
-  selectedIds: string[];
-  onChange: (ids: string[]) => void;
-}) {
-  if (options.length === 0) return null;
-  return (
-    <div>
-      <label className="text-xs text-text-secondary">{label}:</label>
-      <div className="flex flex-wrap gap-1 mt-1">
-        {options.map((opt) => {
-          const isSelected = selectedIds.includes(opt.id);
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => {
-                const next = isSelected
-                  ? selectedIds.filter((id) => id !== opt.id)
-                  : [...selectedIds, opt.id];
-                onChange(next);
-              }}
-              className={`px-2 py-0.5 text-xs rounded border transition-colors ${
-                isSelected
-                  ? 'border-brand-cyan bg-brand-cyan/10 text-brand-cyan font-medium'
-                  : 'border-border bg-white text-text-secondary hover:border-gray-300'
-              }`}
-            >
-              {opt.name}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
 }
 
 export function ConditionRow({
   condition,
   jobStatuses,
-  sites,
-  regions,
   onChange,
   onRemove,
 }: ConditionRowProps) {
@@ -278,98 +227,24 @@ export function ConditionRow({
 
       {/* Condition Details */}
       <div className="flex-1 space-y-2">
-        {/* Row 1: Job Type + Priority */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-text-secondary">Job type:</label>
-            <select
-              value={condition.jobTypeFilter}
-              onChange={(e) => handleJobTypeChange(e.target.value as JobTypeFilter)}
-              className="px-2 py-1 text-xs border border-border rounded bg-white text-text-primary focus:outline-none focus:border-brand-cyan"
-            >
-              {JOB_TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-text-secondary">Priority:</label>
-            <select
-              value={condition.priorityFilter ?? 'ALL'}
-              onChange={(e) =>
-                onChange({ ...condition, priorityFilter: e.target.value === 'ALL' ? undefined : e.target.value })
-              }
-              className="px-2 py-1 text-xs border border-border rounded bg-white text-text-primary focus:outline-none focus:border-brand-cyan"
-            >
-              {PRIORITY_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Job Type Filter */}
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-text-secondary">Job type:</label>
+          <select
+            value={condition.jobTypeFilter}
+            onChange={(e) => handleJobTypeChange(e.target.value as JobTypeFilter)}
+            className="px-2 py-1 text-xs border border-border rounded bg-white text-text-primary focus:outline-none focus:border-brand-cyan"
+          >
+            {JOB_TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         </div>
 
-        {/* Type-specific fields + time threshold */}
+        {/* Type-specific fields */}
         {renderTypeFields()}
-
-        {(condition.type === 'job_unassigned' || condition.type === 'job_assigned') && (
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-text-secondary">Time threshold:</label>
-            <input
-              type="number"
-              value={condition.timeThresholdMinutes ?? ''}
-              onChange={(e) =>
-                onChange({
-                  ...condition,
-                  timeThresholdMinutes: e.target.value ? parseInt(e.target.value, 10) : undefined,
-                })
-              }
-              placeholder="0"
-              className="w-20 px-2 py-1.5 text-sm border border-border rounded bg-white text-text-primary focus:outline-none focus:border-brand-cyan"
-              min={0}
-            />
-            <span className="text-xs text-text-muted">minutes before triggering</span>
-          </div>
-        )}
-
-        {/* Site Filters */}
-        {sites.length > 0 && (
-          <div className="grid grid-cols-2 gap-3">
-            <ChipSelect
-              label="From site"
-              options={sites}
-              selectedIds={condition.fromSiteIds ?? []}
-              onChange={(ids) => onChange({ ...condition, fromSiteIds: ids.length ? ids : undefined })}
-            />
-            <ChipSelect
-              label="To site"
-              options={sites}
-              selectedIds={condition.toSiteIds ?? []}
-              onChange={(ids) => onChange({ ...condition, toSiteIds: ids.length ? ids : undefined })}
-            />
-          </div>
-        )}
-
-        {/* Region Filters */}
-        {regions.length > 0 && (
-          <div className="grid grid-cols-2 gap-3">
-            <ChipSelect
-              label="From region"
-              options={regions}
-              selectedIds={condition.fromRegionIds ?? []}
-              onChange={(ids) => onChange({ ...condition, fromRegionIds: ids.length ? ids : undefined })}
-            />
-            <ChipSelect
-              label="To region"
-              options={regions}
-              selectedIds={condition.toRegionIds ?? []}
-              onChange={(ids) => onChange({ ...condition, toRegionIds: ids.length ? ids : undefined })}
-            />
-          </div>
-        )}
       </div>
 
       {/* Remove Button */}
